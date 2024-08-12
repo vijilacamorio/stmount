@@ -139,24 +139,15 @@ function checkoutresrvation(id){
         }
     });
 }
-function printresrvation(id){
+function printresrvation(id) {
     "use strict";
     var csrf = $('#csrf_token').val();
-    var myurl = baseurl + "room_reservation/room_reservation/viewdetailsprint/"+id;
-    $.ajax({
-        url: myurl,
-        type: "POST",
-        data: {
-            csrf_test_name: csrf,
-        },
-        success: function(data) {
-            $("#printreservation").html(data);
-            setTimeout(function () {
-                $(".print-list").trigger('click');
-             }, 100);
-        }
-    });
+    var myurl = baseurl + "room_reservation/room_reservation/viewdetailsprint/" + id;
+
+    // Open the URL in a new tab
+    window.open(myurl, '_blank');
 }
+
 function print_adv_resrvation(id){
     "use strict";
     var csrf = $('#csrf_token').val();

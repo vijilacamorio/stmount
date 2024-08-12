@@ -1,5 +1,11 @@
 <?php
+
 defined('BASEPATH') OR exit('No direct script access allowed');
+
+require_once 'vendor/autoload.php';
+
+use Dompdf\Dompdf;
+use Dompdf\Options;
 
 class Room_reservation extends MX_Controller {
     
@@ -447,7 +453,7 @@ WHERE
             // $view='<a href="'.base_url().'room_reservation/booking-information/'.$value->bookedid.'" class="btn btn-info btn-sm margin_right_5px" data-toggle="tooltip" data-placement="top" data-original-title="View" title="View"><i class="ti-eye"></i></a>';
             // endif;
             if($this->permission->method('room_reservation','read')->access()):
-            $print='<input name="url" type="hidden" id="url_'.$value->bookedid.'"/><a onclick="printresrvation('.$value->bookedid.')" class="btn btn-primary btn-sm margin_right_5px" data-toggle="tooltip" data-placement="top" data-original-title="Print" title="Print"><i class="fa fa-print text-white" aria-hidden="true"></i></a>';
+            $print='<input name="url" type="hidden" id="url_'.$value->bookedid.'"/><a href="'.base_url().'room_reservation/viewdetailsprint/'.$value->bookedid.'" class="btn btn-primary btn-sm margin_right_5px" data-toggle="tooltip" data-placement="top" data-original-title="Print" title="Print" target="_blank"><i class="fa fa-print text-white" aria-hidden="true"></i></a>';
             endif;
 			 //if($this->permission->method('room_reservation','read')->access()):
     //         $adv='<input name="url" type="hidden" id="url_'.$value->bookedid.'"/><a onclick="print_adv_resrvation('.$value->bookedid.')" class="btn btn-primary btn-sm margin_right_5px" data-toggle="tooltip" data-placement="top" data-original-title="Print" title="Print"><i class="ti-money text-white" aria-hidden="true"></i></a>';
@@ -3525,11 +3531,11 @@ $totalAmount = $additionalCharges + $taxAmount;
 		$this->load->view('room_reservation/carparkingbillprint', $data); 
 	}
 	public function viewdetailsprint($id,$pdf=null){
+	   
 		$details=$this->roomreservation_model->details($id);
 
 		$data['bookinfo']   = $details;
-			//	print_r($data['bookinfo']); die();
-	$data['bookingdata'] = $this->roomreservation_model->detailbooking($id);
+	    $data['bookingdata'] = $this->roomreservation_model->detailbooking($id);
 		$data['customerinfo']   = $this->roomreservation_model->customerinfo($details->cutomerid);
 		$data['paymentinfo']   = $this->roomreservation_model->paymentinfo($details->bookedid);
 		$data['storeinfo']=$this->roomreservation_model->storeinfo();
@@ -3537,16 +3543,26 @@ $totalAmount = $additionalCharges + $taxAmount;
 		$data['paymentinfo_withadv']   = $this->roomreservation_model->paymentinfo_withadv($details->bookedid);
 		$data['btaxinfo']=$this->roomreservation_model->btaxinfo($id);
 		$data['commominfo']=$this->roomreservation_model->commoninfo();
-		$data['currency']=$this->roomreservation_model->currencysetting($data['storeinfo']->currency);  
-		//	print_r($data['bookingdata']); die();
-		if(empty($pdf)){
-		  
-			$this->load->view('room_reservation/bookindetailsprint', $data); 
-		}else{
-		     
-			$pdfhtml = $this->load->view('room_reservation/bookindetailsprintpdf', $data, true);
-			return $pdfhtml;
-		}
+		$data['currency']=$this->roomreservation_model->currencysetting($data['storeinfo']->currency); 
+        
+        $content = $this->load->view('bookindetailsprint', $data, true);
+
+	    $dompdf = new Dompdf();
+
+	    $dompdf->loadHtml($content);
+
+	    $dompdf->setPaper('A4', 'portrait');
+
+	    $dompdf->render();
+
+	    $filename = 'invoice_' . $data['bookinfo']->booking_number . '.pdf';
+
+	    if (empty($pdf)) {
+	    	//echo $content; exit;
+	        $dompdf->stream($filename, array('Attachment' => 0));
+	    } else {
+	        return $content;
+	    }
 	}
 		public function viewdetails_advprint($id,$pdf=null){
 		$details=$this->roomreservation_model->details($id);

@@ -35,7 +35,7 @@ $https = false;
 $dirname = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/').'/';
 $root=$protocol.$_SERVER['HTTP_HOST'].$dirname;
 */
-$config["base_url"] = "https://amoriotech.net/stmount/hores/";  
+$config["base_url"] = "http://localhost/stmount/";  
 
 /*
 |--------------------------------------------------------------------------
