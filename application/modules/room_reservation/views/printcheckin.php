@@ -88,7 +88,7 @@
     </div>
 </footer>
 <div class="pagebreak header-table">
-    <table>
+    <table style="width: 100%;">
       <tr style="font-size: 12px !important;">
          <td>Guest Name</td>
          <td>Bill Date:</td>
@@ -102,7 +102,7 @@
          <td><?php echo $bookinfo->booking_number; ?></td>
        </tr>
         <tr style="font-size: 12px !important;">
-          <td style="min-width: 40px !important;">
+          <td style="min-width: 40px !important; max-width: 100px !important; word-wrap: break-word; word-break: break-all;">
             <?php echo html_escape(!empty($customerinfo->address)?$customerinfo->address:null);?><br>
             <?php echo html_escape(!empty($customerinfo->cust_phone)?$customerinfo->cust_phone:null);?><br>
             <?php echo html_escape(!empty($customerinfo->email)?$customerinfo->email:null);?><br>
@@ -170,17 +170,15 @@
 
                 $roomcount = explode(",", $bookinfo->room_no);
            
-            //for($n=0;$n<count($roomcount);$n++){
                 foreach ($roomcount as $krow =>$kval) {
                     $row_count++;
 
-                    // If the current row is the 16th, close the previous table and start a new one
                     $tblsta         = 'unclosed';
                     if ($row_count > 1 && ($row_count - 1) % 15 == 0) {
                         $tblsta         = 'closed';
-                        echo '</tbody></table></div>'; // Close the current table
-                        echo '<div style="page-break-before: always;">'; // Add a page break (optional, useful for printing)
-                        echo '<table width="100%" class="mainTable" style="margin-top: 100px;">'; // Start a new table
+                        echo '</tbody></table></div>'; 
+                        echo '<div style="page-break-before: always;">';
+                        echo '<table width="100%" class="mainTable" style="margin-top: 100px;">'; 
                         ?>
                         <thead>
                           <tr>
@@ -310,6 +308,67 @@
     </tbody>
 </table>
 <table class="subTable" style="width: 70% !important; float: right; position: relative; left: 60; bottom: 45; margin-top:25px;">
+<?php 
+
+for($n=0;$n<count($roomcount);$n++){ 
+    $alltotal += $total;
+    $alltax += $allsingle;
+    $allsubtotal +=$subtotal;
+    $complementarycharge += $complementaryprice[$n];
+    for($m=0; $m<$ratecount[$n];$m++){
+        $room_reat += ($extra_facility_days[$m])*($ratecount[$n]);
+    }
+}
+
+for ($m = 0; $m < count($exbed); $m++) {
+    $bedcharge += ($bookingdata[$l]->bedcharge * $extra_facility_days[$m]) * $exbed[$m];
+}
+
+for ($m1 = 0; $m1 < count($experson); $m1++) {
+    $personcharge += ($bookingdata[$l]->personcharge * $extra_facility_days[$m1]) * $experson[$m1];
+}
+
+for ($m2 = 0; $m2 < count($exchild); $m2++) {
+    $childcharge += ($bookingdata[$l]->childcharge * $extra_facility_days[$m2]) * $exchild[$m2];
+}
+if(!empty($bookingdata[$l]->promocode)){
+    $pdiscount = $this->db->select("discount")->from("promocode")->where("promocode", $bookingdata[$l]->promocode)->get()->row();
+    $promocode += $pdiscount->discount;
+} 
+$allroomrent += $alltotal;
+$allroomrentandtax += $allsubtotal;
+$allcomplementarycharge += $complementarycharge;
+$allbpccharge += ($bedcharge+$personcharge+$childcharge);
+$alladvanceamount +=$bookingdata[$l]->advance_amount;
+if(!empty($poolbill)){
+    for($pc=0; $pc<count($poolbill[$l]); $pc++){
+        if($poolbill[$l][$pc]->status==1){$poolbillpaidamt += $poolbill[$l][$pc]->total_amount;}
+        else{$poolbillamt += $poolbill[$l][$pc]->total_amount;$singlepid .= $poolbill[$l][$pc]->pbookingid.",";}
+    }
+}
+if(!empty($restaurantbill)){
+    for($rb=0; $rb<count($restaurantbill[$l]); $rb++){
+        $restbill += $restaurantbill[$l][$rb]->bill_amount;
+        $singleorder .= $restaurantbill[$l][$rb]->order_id.",";
+    }
+}
+if(!empty($hallroombill)){
+    for($hb=0; $hb<count($hallroombill[$l]); $hb++){
+        $hallbill += $hallroombill[$l][$hb]->totalamount;
+        $singlehall .= $hallroombill[$l][$hb]->hbid.",";
+    }
+}
+if(!empty($carParkingBill)){
+    for($cb=0; $cb<count($carParkingBill[$l]); $cb++){
+        $parkingbill += $carParkingBill[$l][$cb]->total_price;
+        $singleparking .= $carParkingBill[$l][$cb]->bookParking_id.",";
+    }
+}
+$total_amount_with_extras=$bookingdata[$l]->roomrate+$allbpccharge;
+$amt_ttl=array_sum($ratecount);
+
+?>
+
     <tbody>
         <tr>
             <td colspan="5" style="text-align: right; border: none !important; font-weight: bold;"><?php echo display("sub_total"); ?></td>
@@ -327,12 +386,25 @@
             <td style="border: none !important; text-align: right;">:</td>
             <td style="border: none !important;"><?php if($currency->position==1){ echo html_escape($currency->curr_icon); } ?><?php echo $bookinfo->sgst;  ?><?php if($currency->position==2){ echo html_escape($currency->curr_icon); } ?></td>
         </tr>
-        
-        <?php if($btaxinfo->additional_charges > 0){ ?>
-        <tr>
-            <td colspan="5" style="text-align: right; border: none !important; font-weight: bold;">Additional Charges 18%</td>
+
+        <tr id="invadc1" hidden>
+            <td colspan="5" style="text-align: right; border: none !important; font-weight: bold;">Additional CGST (9%)</td>
             <td style="border: none !important; text-align: right;">:</td>
-            <td style="border: none !important;"><?php if($currency->position==1){ echo html_escape($currency->curr_icon); } ?><?php echo $btaxinfo->additional_charges+ $bookinfo->additional_cgst+ $bookinfo->additional_sgst;  ?><?php if($currency->position==2){ echo html_escape($currency->curr_icon); } ?></td>
+            <td style="border: none !important;" id="inadcamtcgst"></td>
+        </tr>
+
+         <tr id="invadc2" hidden>
+            <td colspan="5" style="text-align: right; border: none !important; font-weight: bold;">Additional SGST (9%)</td>
+            <td style="border: none !important; text-align: right;">:</td>
+            <td style="border: none !important;" id="inadcamtsgst"></td>
+        </tr>
+
+        
+        <?php if($allbpccharge > 0){ ?>
+        <tr>
+            <td colspan="5" style="text-align: right; border: none !important; font-weight: bold;"><?php echo display("complementary_amt") ?>.</td>
+            <td style="border: none !important; text-align: right;">:</td>
+            <td style="border: none !important;"><?php if($currency->position==1){ echo html_escape($currency->curr_icon); } ?><?php echo html_escape($extrabpc); ?><?php if($currency->position==2){ echo html_escape($currency->curr_icon); } ?></td>
         </tr>
         <?php } ?>
 
@@ -344,29 +416,29 @@
         </tr>
         <?php } ?>
 
-        <?php if($bookinfo->advance_amount > 0){ ?>
+        <?php if($alladvanceamount > 0){ ?>
         <tr>
             <td colspan="5" style="text-align: right; border: none !important; font-weight: bold;">Advance Amount</td>
             <td style="border: none !important; text-align: right;">:</td>
-            <td style="border: none !important;"><?php if($currency->position==1){ echo html_escape($currency->curr_icon); } ?><?php echo $bookinfo->advance_amount;  ?><?php if($currency->position==2){ echo html_escape($currency->curr_icon); } ?></td>
-        </tr>
-        <?php } ?>
-        <?php if($bookinfo->paid_amount > 0){ ?>
-        <tr>
-            <td colspan="5" style="text-align: right; border: none !important; font-weight: bold;">Paid Amount</td>
-            <td style="border: none !important; text-align: right;">:</td>
-            <td style="border: none !important;"><?php if($currency->position==1){ echo html_escape($currency->curr_icon); } ?><?php echo $bookinfo->paid_amount;  ?><?php if($currency->position==2){ echo html_escape($currency->curr_icon); } ?>  </td>
-        </tr>
-        <?php } ?>
-        <?php if($bookinfo->paid_amount > 0){ ?>
-        <tr>
-            <td colspan="5" style="text-align: right; border: none !important; font-weight: bold;"><?php echo ("Total Amount Received") ?></td>
-            <td style="border: none !important; text-align: right;">:</td>
-            <td style="border: none !important;"><?php if($currency->position==1){ echo html_escape($currency->curr_icon); } ?><?php $allbpccharge = ($bedcharge+$personcharge+$childcharge); $singletax += ($bookinfo->cgst + $bookinfo->sgst);
-                echo $bookinfo->paid_amount; ?><?php if($currency->position==2){ echo html_escape($currency->curr_icon); } ?>
+            <td style="border: none !important;">
+               <?php if($currency->position==1){ echo html_escape($currency->curr_icon); } ?><?php echo html_escape($alladvanceamount); ?><?php if($currency->position==2){ echo html_escape($currency->curr_icon); } ?>
             </td>
         </tr>
         <?php } ?>
+       
+        <tr id="paidamounttitle" hidden>
+            <td colspan="5" style="text-align: right; border: none !important; font-weight: bold;">Paid Amount</td>
+            <td style="border: none !important; text-align: right;">:</td>
+            <td style="border: none !important;" id="paidamount"></td>
+        </tr>
+        
+        <tr>
+            <td colspan="5" style="text-align: right; border: none !important; font-weight: bold;"><?php echo ("Total Amount Received") ?></td>
+            <td style="border: none !important; text-align: right;">:</td>
+            <td style="border: none !important;" id="inpayableamt">
+                <?php if($currency->position==1){ echo html_escape($currency->curr_icon); } ?><?php echo ($amt_ttl+$allbpccharge+$singletax)-$alladvanceamount-$disamt;   ?><?php if($currency->position==2){ echo html_escape($currency->curr_icon); } ?>
+            </td>
+        </tr>
     </tbody>
 </table>
 </body>

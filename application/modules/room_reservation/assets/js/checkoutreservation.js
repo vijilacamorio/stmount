@@ -361,8 +361,9 @@ function checkout() {
         });
         return false;
     }
-    debugger;
+    
     var bookedid = $("#bookedid").val();
+    var booknumber = $("#inbknumber").text();
     var collectedamt = $("#collectedamt").text();
     var refunddamt = $("#refunddamt").text();
     var roomRent = $("#allroomrent").text();
@@ -533,7 +534,7 @@ function checkout() {
     paymentamount = paymentamount.replace(/,\s*$/, "");
     // bankname = bankname.replace(/,\s*$/, "");
     cardno = cardno.replace(/,\s*$/, "");
-      bankname = bankname.replace(/,\s*$/, "");
+    bankname = bankname.replace(/,\s*$/, "");
     accountnumber = accountnumber.replace(/,\s*$/, "");
     cheque_no = cheque_no.replace(/,\s*$/, "");
     cheque_date = cheque_date.replace(/,\s*$/, "");
@@ -547,6 +548,7 @@ function checkout() {
     $.ajax({
         url: myurl,
         type: "POST",
+        // dataType: 'json',
         data: {
             csrf_test_name: csrf,
             collectedamt: collectedamt,
@@ -567,6 +569,7 @@ function checkout() {
             restbill: restbill,
             poolid: poolid,
             hallid: hallid,
+            booknumber: booknumber,
             roomRent:roomRent,
             rent: rentafterdiscount,
             bc:bc,
@@ -594,6 +597,8 @@ function checkout() {
           
         },
         success: function(data) {
+            var response = JSON.parse(data);
+            console.log(response, "response");
             if (data.substr(4, 1) === "S") {
                 $("#checkoutdetail").attr("hidden", true);
                 $("#go").attr("disabled", true);
@@ -607,9 +612,21 @@ function checkout() {
                 $(".print-btn").trigger('click');
                 toastrSuccessMsg(data);
                 $(".sidebar-mini").removeClass('sidebar-collapse');
-            } else
-                toastrErrorMsg(data);
-            setTimeout(function() {}, 1000);
+            } 
+            
+            if (response.success) {
+                var link = document.createElement('a');
+                link.href = response.file_url;
+                link.download = response.file_url.split('/').pop(); 
+            
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                toastrSuccessMsg(response.success); 
+                setTimeout(function() {
+                    window.location.href = baseurl +'room_reservation/checkin-list';
+                }, 1000);
+            } 
         }
     });
 }

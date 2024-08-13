@@ -3,7 +3,7 @@
 <link rel="stylesheet" href="<?php echo MOD_URL.$module;?>/assets/css/checkoutview.css">
 
 <div class="form-group row">
-<!--     <style>
+    <style>
  @media print {
             /* Define styles for the print layout */
             .print-footer {
@@ -36,7 +36,7 @@
         .invp-7{
             margin-bottom: 0px !important;
         }
-    </style> -->
+    </style>
     <div class="invalid-feedback" id="cmsg" hidden></div>
     <label
         class="col-3 col-sm-3 col-md-3 col-lg-2 col-xl-2 col-form-label text-right font-weight-600"><?php echo display("room_no") ?>
@@ -321,7 +321,7 @@ $extrabpc=$total_bed_charge+$total_person_charge+$total_child_charge;
                                 </thead>
                                 <tbody>
                                     <?php 
-                                    // print_r($bookingdata); die()
+                                    // print_r($bookingdata); die();
                                    $room_rent_array=array();
                                    $extracheckin_array=array();
                                    $extracheckout_array=array();
@@ -964,9 +964,10 @@ for ($m2 = 0; $m2 < count($exchild); $m2++) {
             <small></small>
         </div>
         <div class="mt-3 mt-lg-0">
-            <a href="<?php echo base_url('room_reservation/viewdetailsprint/' . $bookingdata[0]->bookedid); ?>" class="btn btn-success btn-lg" target="_blank"><?php echo display("print") ?></a>
+            <button type="button" onclick="printDiv('printArea')"
+                class="btn btn-success btn-lg print-btn"><?php echo display("print") ?></button>
 
-            <!-- <button type="button" onclick="printDiv('printArea')" class="btn btn-success btn-lg print-btn"><?php echo display("print") ?></button> -->
+             <!-- <button type="button" id="print_invoice" class="btn btn-success btn-lg print-btn"><?php echo display("print") ?></button> -->
             <input type="hidden" id="bookedid" value="<?php echo trim($bookedid,","); ?>">
             <button type="button" disabled id="checkout" onclick="checkout()"
                 class="btn btn-info btn-lg"><?php echo display("checkout") ?></button>
@@ -1011,9 +1012,478 @@ for ($m2 = 0; $m2 < count($exchild); $m2++) {
     <input type="hidden" id="person_amount" value="<?php echo isset($persontotal) ? $persontotal : 0; ?>">
     <input type="hidden" id="child_amount" value="<?php echo isset($childtotal) ? $childtotal : 0; ?>">
 
+    <div id="printArea" hidden>
+
+    
    
     <!--Print button-->
+    <div class="invoice-wrap print-content invp-1">
+        <div class="invp-2"><span id="ipaid" style='font-weight:bolder;' class="color-red"><?php echo display("unpaid") ?></span></div>
+        <div id="Headerpart">
+        <div class="invp-3"  style="margin-top:-4px;margin-bottom:40px;">
+           <img src="<?php echo base_url($invoicelogo->invoice_logo) ?>" style="width:80px;height:80px;" alt="..." class="invp-img">
+            <h5 class="invp-6" style="font-weight:bold;"><?php echo html_escape($setting->title); ?></h5>
+            <p class="invp-5"><?php echo display("address") ?>: <?php echo html_escape($setting->address); ?></p>
+           <p  class="invp-5"> <strong><?php echo "Mobile : " ?></strong> <?php echo html_escape($setting->phone); ?>.<strong><?php echo "   Email : " ?></strong>  <?php echo html_escape($setting->email); ?><br></p>
+            <p  class="invp-6"><strong><?php echo ("GST NO") ?>: <?php echo ("33AACCB5396H1ZN"); ?></strong></p>
+            <h5 class="invp-10" style="font-weight:bolder;"><?php echo "INVOICE"; ?></h5> 
+        </div>
 
+        <div class="invp-7">
+            <div class="invp-11" style="text-align:left;">
+             
+                <p class="invp-8">
+                    <?php echo ("Guest Info") ?></p>
+                <div>
+                    <address class="invp-12">
+                        <!-- <strong class="invp-9"><?php //echo display("details_of_the_guest") ?> </strong><br> -->
+                      <span class="invp-10"> <?php if($bookingdata[0]->title){ echo html_escape($bookingdata[0]->title)."." ;} ?></span><span class="invp-10"
+                            id="invname"></span><span class="invp-10" ><?php  echo " ".$bookingdata[0]->lastname  ; ?></span><br>
+                        <span
+                            id="invmobile"></span>
+                        <br>
+                       <span
+                            id="invemail"></span>
+                    </address>
+                </div>
+            </div>
+
+                <div>
+               <strong>  Bill Date :  </strong> <?php echo html_escape($invissue); ?><br/>
+               <strong>  Bill No  &nbsp;&nbsp;  :</strong>  <?php  echo $bookingdata[0]->booking_number  ; ?>
+               
+            </div>
+        </div>
+    </div>
+        <!-- Order Details -->
+
+       <table class="invp-13 table table-bordered table-sm mb-0" id="checkouttable">
+        <thead>
+        <?php
+        $allroomrent = 0; $allroomrentandtax = 0;
+        $bedcharge = 0; $personcharge = 0; $childcharge = 0; $allbpccharge = 0; $advanceamount = 0;
+        $room_rate_for_all_room=array();
+        $alladvanceamount = 0; $bookedid=""; $poolbillamt = 0; $poolbillpaidamt = 0;
+        $allcomplementarycharge = 0; $restbill = 0; $hallbill=0; $poolid=""; $orderid = "";$hallid ="";$parkingbill=0;$parkingid="";$promocode=0;
+        $total_amount_with_extras=array();
+        for($l=0; $l<count($bookingdata);$l++){
+            ?>
+            <tr>
+                                        <th><?php echo "S.No" ?></th>
+                                        <th><?php echo "Room No"; ?></th>
+                                        <th><?php echo "Room Type"; ?></th>
+                                        <th><?php echo display("from_date") ?></th>
+                                        <th><?php echo display("to_date") ?></th>
+                                        <th><?php echo display("nod") ?></th>
+                                        <th style='display:none;'><?php echo ("Per Day Rent") ?></th>
+                                        <th  ><?php if($currency->position==1){ echo "(".html_escape($currency->curr_icon).") "; } ?><?php echo display("rent"); ?>
+                                            <?php if($currency->position==2){ echo "(".html_escape($currency->curr_icon).")"; } ?>
+                                        </th>
+                                        <th  style='display:none;'><?php if($currency->position==1){ echo "(".html_escape($currency->curr_icon).") "; } ?><?php echo display("rent")." ".display("discount"); ?>
+                                            <?php if($currency->position==2){ echo "(".html_escape($currency->curr_icon).")"; } ?>
+                                        </th>
+                                       
+                                        <th style='display:none;'><?php if($currency->position==1){ echo "(".html_escape($currency->curr_icon).") "; } ?><?php echo display("tax") ?>
+                                            <?php if($currency->position==2){ echo "(".html_escape($currency->curr_icon).")"; } ?>
+                                        </th>
+                                    
+                </tr>
+                            </thead>
+                            <tbody>
+                                <?php 
+                                    $complementarycharge = 0;
+                                    $room_no_string = $bookingdata[$l]->room_no;
+                                    $room_no_array = explode(',', $room_no_string);
+
+                                    $rtype=""; $alltotal = 0; $alltax = 0; $allsubtotal = 0; $singlepid=""; $singleorder="";$singlehall="";$singleparking="";
+                                    $roomtype = explode(",",$bookingdata[$l]->roomid);
+                    
+                                    $room_type=array();
+
+                                    for($s=0;$s<count($roomtype);$s++){
+                                        $sroomtype = $this->db->select("roomtype")->from("roomdetails")->where("roomid",$roomtype[$s])->get()->row();
+                                       $room_type[]=$sroomtype->roomtype;
+                                    }
+                   
+                                for($n=0;$n<count($roomcount);$n++){
+                                    ?>
+                                    <tr>
+                                        <td><?php echo $n+1; ?></td>
+                                        <td>
+                                            <?php echo $room_no_array[$n]; ?>
+                                            
+                                        </td>
+                                        <td>
+                                         <?php echo $room_type[$n]; ?>
+                                        </td>
+                                        <td><?php echo html_escape($bookingdata[$l]->checkindate); ?></td>
+                                       <td><?php echo html_escape($bookingdata[$l]->checkoutdate); ?></td>
+                                        <td  id="nod"><?php
+                                        $start = strtotime($bookingdata[$l]->checkindate);
+                                        $end = strtotime($bookingdata[$l]->checkoutdate);
+                                        $datediff = $end - $start;
+                                        echo $days = ceil($datediff / (60 * 60 * 24));
+                                        ?></td>
+                                    
+                                       <td><?php
+                                             for($m=0; $m<$ratecount[$n];$m++){
+                                             $room_rent_array = ($extra_facility_days[$m])*($ratecount[$n]);
+                                                echo ($ratecount[$n]);
+                                                break;
+                                            }
+                                         ?>
+                                        </td>
+                                        <?php $allsingle=0; ?>
+                                        </tr>
+                                        <?php
+                                        $alltotal += $total;
+                                        $alltax += $allsingle;
+                                        $allsubtotal +=$subtotal;
+                                        $complementarycharge += $complementaryprice[$n];
+                                        for($m=0; $m<$ratecount[$n];$m++){
+                                            $room_reat += ($extra_facility_days[$m])*($ratecount[$n]);
+                                        }
+                                    }
+                                    for ($m = 0; $m < count($exbed); $m++) {
+                                        $bedcharge += ($bookingdata[$l]->bedcharge * $extra_facility_days[$m]) * $exbed[$m];
+                                    }
+
+                                    for ($m1 = 0; $m1 < count($experson); $m1++) {
+                                        $personcharge += ($bookingdata[$l]->personcharge * $extra_facility_days[$m1]) * $experson[$m1];
+                                    }
+
+                                    for ($m2 = 0; $m2 < count($exchild); $m2++) {
+                                        $childcharge += ($bookingdata[$l]->childcharge * $extra_facility_days[$m2]) * $exchild[$m2];
+                                    }
+                                    if(!empty($bookingdata[$l]->promocode)){
+                                        $pdiscount = $this->db->select("discount")->from("promocode")->where("promocode", $bookingdata[$l]->promocode)->get()->row();
+                                        $promocode += $pdiscount->discount;
+                                    } 
+                                    $allroomrent += $alltotal;
+                                    $allroomrentandtax += $allsubtotal;
+                                    $allcomplementarycharge += $complementarycharge;
+                                    $allbpccharge += ($bedcharge+$personcharge+$childcharge);
+                                    $alladvanceamount +=$bookingdata[$l]->advance_amount;
+                                    if(!empty($poolbill)){
+                                        for($pc=0; $pc<count($poolbill[$l]); $pc++){
+                                            if($poolbill[$l][$pc]->status==1){$poolbillpaidamt += $poolbill[$l][$pc]->total_amount;}
+                                            else{$poolbillamt += $poolbill[$l][$pc]->total_amount;$singlepid .= $poolbill[$l][$pc]->pbookingid.",";}
+                                        }
+                                    }
+                                    if(!empty($restaurantbill)){
+                                        for($rb=0; $rb<count($restaurantbill[$l]); $rb++){
+                                            $restbill += $restaurantbill[$l][$rb]->bill_amount;
+                                            $singleorder .= $restaurantbill[$l][$rb]->order_id.",";
+                                        }
+                                    }
+                                    if(!empty($hallroombill)){
+                                        for($hb=0; $hb<count($hallroombill[$l]); $hb++){
+                                            $hallbill += $hallroombill[$l][$hb]->totalamount;
+                                            $singlehall .= $hallroombill[$l][$hb]->hbid.",";
+                                        }
+                                    }
+                                    if(!empty($carParkingBill)){
+                                        for($cb=0; $cb<count($carParkingBill[$l]); $cb++){
+                                            $parkingbill += $carParkingBill[$l][$cb]->total_price;
+                                            $singleparking .= $carParkingBill[$l][$cb]->bookParking_id.",";
+                                        }
+                                    }
+                                    $total_amount_with_extras=$bookingdata[$l]->roomrate+$allbpccharge;
+                                    $amt_ttl=array_sum($ratecount);
+                                    ?>
+                                </tbody>
+                                <tfoot>
+                                    <tr>
+                                        <td class="addcolspan" colspan="7">
+                                            <?php echo display("adults") ?> : <?php 
+                                            $nuofpeople = 0;
+                                                foreach ($bookingdata as $booking) {
+                                                    $nuofpeople += $booking->nuofpeople;
+                                                }
+                                            echo html_escape($nuofpeople);
+                                             ?>
+                                            <br>
+                                          
+                                            <?php 
+
+                                                $exbed = explode(",", $bookingdata[$l]->extrabed);
+                                                $room_reat=0;
+                                                $experson = explode(",", $bookingdata[$l]->extraperson);
+                                                $exchild = explode(",", $bookingdata[$l]->extrachild);
+                                                $bedcharge1=explode(",",$bookingdata[$l]->bedcharge);
+                                                $personcharge1=explode(",",$bookingdata[$l]->personcharge);
+                                                $childcharge1=explode(",",$bookingdata[$l]->childcharge);
+                                                ?>
+                                                <?php if (empty($exbed) && empty($experson) && empty($exchild)){ ?>
+                                                    <div> - </div>
+                                                <?php } else { ?>         
+                                                    <?php if(array_sum($exbed) >0){ ?>                   
+                                                        <div ><?php echo "Ex Bed" ?> :  <?php echo array_sum($exbed);  ?></div>
+                                                    <?php } ?>
+                                                    <?php if(array_sum($experson) >0){ ?>
+                                                        <div ><?php echo "Ex Person" ?> :  <?php echo array_sum($experson);  ?></div>
+                                                    <?php } ?>
+                                                    <?php if(array_sum($exchild) >0){ ?>
+                                                        <div ><?php echo "Ex Child" ?> :  <?php  echo array_sum($exchild); ?></div>
+                                                    <?php } }?>
+                                        </td>
+                                    </tr>
+                                </tfoot>
+                    <?php $orderid .= $singleorder.","; $poolid .= $singlepid.","; $hallid .= $singlehall.",";$parkingid .= $singleparking.","; ?>
+                <?php } ?>
+            </tbody>
+        </table>
+<br/>
+      <div class="invp-22">
+    
+            <table border="1" class="additional_table" style="padding:10px;">
+                <thead>
+                  <tr class="tr-background" style="padding:10px;font-size:15px;">
+                      
+                       
+                        <th style="width:200px;" class="res-padding"  ><?php echo ("Additional Charge Reason") ?></th>
+                        <th class="res-allign-padding"  ><?php echo ("Remarks") ?></th>
+                    </tr>  
+                </thead>
+                <tbody>
+                    <tr style="padding:10px;font-size:15px;">
+                      
+                       
+                        <th  class="res-padding" id="ad_rsn"></th>
+                        <th class="res-allign-padding" id="ad_rmk"></th>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <table border="1" class="paymentdetails" id="paymentdetails">
+                <tbody style="border-color: white;padding-right: 80px;text-align: left;">
+                    <tr id="paymentmethod_0" style="border: none;border-color: white;" >
+                        <th class="res-padding" id="pmode_0"><?php echo display("payment_mode") ?></th>
+                        <th   style="text-align:left;" id="pamount_0"><?php echo display("amnt") ?></th>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="invp-22" id="checkoutsubtotal">
+            <table style='padding:2px;border:none' border="0" cellpadding="0" cellspacing="0" align="center" class="invp-24">
+                <tbody>
+                                      <tr id="invdis" hidden>
+                        <td class=" invp-27">
+                            <small id="indistitle"></small>
+                        </td>
+                        <td class=" invp-27">
+                            <small id="indisamt"></small>
+                        </td>
+                    </tr>
+                    <tr style='border:none'>
+                       <td style='border:none' class="invp-25">
+                           <?php echo display("sub_total") ?>
+                       </td>
+                       
+                       <td style='border:none' class="invp-26" id="sub" width="80">
+                           <?php if($currency->position==1){ echo html_escape($currency->curr_icon); } ?><?php echo $amt_ttl;  ?><?php if($currency->position==2){ echo html_escape($currency->curr_icon); } ?>
+                       </td>
+                    </tr>
+                      
+                  <tr>
+                        <td class="invp-25">
+                           <?php echo ("CGST");
+                                foreach($taxsetting as $tax){ 
+                                                if($tax->taxname == 'CGST'){
+                                                echo "(".html_escape($tax->rate)."% )"; 
+                                             //  echo  ($tax->rate*($amt_ttl+$allbpccharge))/100 ;
+                                                break;
+                                                }
+                                           } 
+                            ?>
+                        </td>
+                    <td class=" invp-26">
+                                <small><?php if($currency->position==1){ echo html_escape($currency->curr_icon); } ?><span class="discount_cgst"><?php echo $bookingdata[0]->cgst; ?></span><?php if($currency->position==2){ echo html_escape($currency->curr_icon); } ?></small>
+                            </td>
+                    </tr>
+                     <tr>
+                        <td class="invp-25">
+                            <?php echo ("SGST");
+                                foreach($taxsetting as $tax){ 
+                                                if($tax->taxname == 'SGST'){
+                                                echo "(".html_escape($tax->rate)."% )"; 
+                                             //  echo  ($tax->rate*($amt_ttl*$days+$allbpccharge))/100 ;
+                                              break;   
+                                                }
+                                           } 
+                            ?>
+                        </td>
+                        <td class=" invp-26">
+                                <small><?php if($currency->position==1){ echo html_escape($currency->curr_icon); } ?><span class="discount_sgst"><?php echo $bookingdata[0]->sgst; ?></span><?php if($currency->position==2){ echo html_escape($currency->curr_icon); } ?></small>
+                            </td>
+
+                    <?php if($allcomplementarycharge>0) { ?>
+                    <tr>
+                        <td class=" invp-27">
+                            <small><?php echo display("complementary_amt") ?>.</small>
+                        </td>
+                        <td class=" invp-27">
+                            <small><?php if($currency->position==1){ echo html_escape($currency->curr_icon); } ?><?php echo html_escape($allcomplementarycharge); ?><?php if($currency->position==2){ echo html_escape($currency->curr_icon); } ?></small>
+                        </td>
+                    </tr>
+                    <?php } ?>
+                    <?php if($allbpccharge>0) { ?>
+                    <tr>
+                        <td class=" invp-25">
+                           <?php echo display("extra_bpc_amt") ?>.
+                        </td>
+                        <td class=" invp-26">
+                           <?php if($currency->position==1){ echo html_escape($currency->curr_icon); } ?><?php echo html_escape($extrabpc); ?><?php if($currency->position==2){ echo html_escape($currency->curr_icon); } ?>
+                        </td>
+                    </tr>
+                    <?php } ?>
+                    <tr id="poolamttitle" hidden>
+                        <td class=" invp-27">
+                            <small><?php echo display("swimming_pool") ?></small>
+                        </td>
+                        <td class=" invp-27">
+                            <small id="poolamt"></small>
+                        </td>
+                    </tr>
+                    <tr id="restbillamttitle" hidden>
+                        <td class=" invp-27">
+                            <small><?php echo display("restaurant") ?></small>
+                        </td>
+                        <td class=" invp-27">
+                            <small id="restbillamt"></small>
+                        </td>
+                    </tr>
+                    <tr id="hallbillamttitle" hidden>
+                        <td class=" invp-27">
+                            <small><?php echo display("hall_room") ?></small>
+                        </td>
+                        <td class=" invp-27">
+                            <small id="hallbillamt"></small>
+                        </td>
+                    </tr>
+                    <tr id="parkingbillamttitle" hidden>
+                        <td class=" invp-27">
+                            <small><?php echo display("car_parking") ?></small>
+                        </td>
+                        <td class=" invp-27">
+                            <small id="parkingbillamt"></small>
+                        </td>
+                    </tr>
+                 <tr id="invadc" hidden>
+                       <td class=" invp-27">
+                                <small><?php echo ("Additional Charges 18%"); ?></small>
+                            </td>
+                            <td class=" invp-25" id="adv_amt">
+                             
+                            </td>
+                    </tr>
+                    <tr id="invadc1" hidden>
+                        <td class=" invp-27">
+                          <?php echo "Additional CGST (9%)" ?>
+                        </td>
+                        <td class=" invp-27">
+                            <small id="inadcamtcgst"></small>
+                        </td>
+                    </tr>
+                    <tr id="invadc2" hidden>
+                        <td class=" invp-27">
+                          <?php echo "Additional SGST (9%)" ?>
+                        </td>
+                        <td class=" invp-27">
+                            <small id="inadcamtsgst"></small>
+                        </td>
+                    </tr>
+
+                    <tr id="invcredit" hidden>
+                        <td class=" invp-27">
+                            <small id="creditreason"></small>
+                        </td>
+                        <td class=" invp-27">
+                            <small id="increditamt"></small>
+                        </td>
+                    </tr>
+                    <tr id="invsdis" hidden>
+                        <td class=" invp-27">
+                            <small id="invsdistitle"><?php echo display("special_discount") ?></small>
+                        </td>
+                        <td class=" invp-27">
+                            <small id="insdis"></small>
+                        </td>
+                    </tr>
+                    <?php if($alladvanceamount>0) { ?>
+                    <tr>
+                        <td class=" invp-25">
+                           <?php echo display("advance_amount") ?>
+                        </td>
+                        <td class=" invp-26">
+                           <?php if($currency->position==1){ echo html_escape($currency->curr_icon); } ?><?php echo html_escape($alladvanceamount); ?><?php if($currency->position==2){ echo html_escape($currency->curr_icon); } ?>
+                        </td>
+                    </tr>
+                    <?php } ?>
+                    <tr id="paidamounttitle" hidden>
+                        <td class=" invp-27">
+                         <?php echo display("paid_amount") ?>
+                        </td>
+                        <td class=" invp-27">
+                            <small id="paidamount"></small>
+                        </td>
+                    </tr>
+                    <tr id="changeamounttitle" hidden>
+                        <td class=" invp-27">
+                            <small><?php echo display("cng_amount") ?></small>
+                        </td>
+                        <td class=" invp-27">
+                            <small id="changeamount"></small>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="invp-28">
+                            <strong><?php echo ("Total Amount Received") ?></strong>
+                        </td>
+                        <td class="invp-28">
+                            <strong
+                                id="inpayableamt"><?php if($currency->position==1){ echo html_escape($currency->curr_icon); } ?><?php echo ($amt_ttl+$allbpccharge+$singletax)-$alladvanceamount-$disamt;   ?><?php if($currency->position==2){ echo html_escape($currency->curr_icon); } ?></strong>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+            </div>
+        
+            <div class="invp-29">&nbsp;</div>
+
+   <div class="print-footer-container">
+        <div class="print-footer">
+       
+            <p style="text-align:center;height: 0px; font-size: 12px; margin-top: 10px; border-top: 1px solid #c7bcbc;; border-bottom: 1px solid #c7bcbc;;">
+                PLEASE RETURN YOUR KEY CARD ON DEPARTURE
+            </p>
+            <p style="text-align:left;height: 0px; font-size: 12px; margin-top: 10px; border-top: 1px solid #c7bcbc;; border-bottom: 1px solid #c7bcbc;;">
+                    I Agree that I am responsible for the full payment of this bill in the event it is not paid by the Company, Organisation, or Person
+                    indicated Billing Instructions: <strong>DIRECT</strong>
+                                    </p>
+                              
+                        <div class="invp-34">
+                            <div class="invp-35"><?php echo display("guest_signature") ?></div>
+                            <div class="invp-35"><?php echo display("authorized_signature") ?></div>
+                        </div>
+        </div>
+    </div>
+
+    </div>        </div>
+    <div id="paymentinfo" hidden>
+        <option value="" selected>Choose <?php echo display("payment_mode") ?></option>
+        <?php foreach($paymentdetails as $ptype){ ?>
+        <option value="<?php echo html_escape($ptype->payment_method) ?>">
+            <?php echo html_escape($ptype->payment_method) ?></option>
+        <?php } ?>
+    </div>
+    <div id="bankinfo" hidden>
+        <option value="" selected>Choose <?php echo display("bank_name") ?></option>
+        <?php foreach($banklist as $list){ ?>
+        <option value="<?php echo html_escape($list->HeadName); ?>">
+            <?php echo html_escape($list->HeadName);?></option>
+        <?php } ?>
+    </div>
     <input type="hidden" id="finyear" value="<?php echo financial_year(); ?>">
     <script src="<?php echo MOD_URL.$module;?>/assets/js/custom.js"></script>
     <script src="<?php echo MOD_URL.$module;?>/assets/js/checkoutreservation.js"></script>

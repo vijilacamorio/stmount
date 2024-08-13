@@ -1,5 +1,10 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
+require_once 'vendor/autoload.php';
+
+use Dompdf\Dompdf;
+use Dompdf\Options;
+
 class Order extends MX_Controller {
     
     public function __construct()
@@ -1474,7 +1479,7 @@ $financialYearStart = ($currentMonth > 3) ? $currentYear : $currentYear - 1;
 			
 			
 			if($this->permission->method('ordermanage','read')->access()):
-			$details='<a href="'.base_url().'ordermanage/order/orderdetails/'.$rowdata->order_id.'" class="btn btn-xs btn-success btn-sm mr-1" data-toggle="tooltip" data-placement="left" title="Details"><i class="fa fa-eye"></i></a>&nbsp;';
+			$details='<a href="'.base_url().'ordermanage/order/orderdetails/'.$rowdata->order_id.'" target="_blank" class="btn btn-xs btn-success btn-sm mr-1" data-toggle="tooltip" data-placement="left" title="Details"><i class="fa fa-eye"></i></a>&nbsp;';
 			endif;
 			if($rowdata->splitpay_status ==1):
         $split='<a href="javascript:;" onclick="showsplit('.$rowdata->order_id.')" class="btn btn-xs btn-success btn-sm mr-1" data-toggle="tooltip" data-placement="left" title="Update" id="table-split-'.$rowdata->order_id.'">'.display('split').'</a>&nbsp;&nbsp;';
@@ -3451,9 +3456,28 @@ public function updateorder($id){
 		   $data['comsettinginfo'] = $this->order_model->commonsettinginfo();	
 	       $data['currency']=$this->order_model->currencysetting($settinginfo->currency);
 
-		   $data['module'] = "ordermanage";
-		   $data['page']   = "details";   
-		   echo Modules::run('template/layout', $data); 
+		    $data['module'] = "ordermanage";
+
+		    $content = $this->load->view('details', $data, true);
+
+		    $dompdf = new Dompdf();
+
+		    $dompdf->loadHtml($content);
+
+		    $dompdf->setPaper('A4', 'portrait');
+
+		    $dompdf->render();
+
+		    $filename = 'restaurantinvoice_' . $data['orderinfo']->saleinvoice . '.pdf';
+
+		    if (empty($pdf)) {
+		    	//echo $content; exit;
+		        $dompdf->stream($filename, array('Attachment' => 0));
+		    } else {
+		        return $content;
+		    }
+		   // $data['page']   = "details";   
+		   // echo Modules::run('template/layout', $data); 
 		  
 		}
 		public function orderdetailspop($id){

@@ -811,7 +811,6 @@ $totalAmount = $additionalCharges + $taxAmount;
 		$this->permission->method('room_reservation','read')->redirect();		
         $data['title']    = display('room_reservation'); 
 	    $bid = explode(",", $id);
-	   // echo $bid; die();
 		for($i=0; $i<count($bid); $i++){
 			$bdetails[$i] = $this->roomreservation_model->detailbooking($bid[$i]);
 			if ($this->db->table_exists('tbl_pool_booking') ){
@@ -863,6 +862,79 @@ $totalAmount = $additionalCharges + $taxAmount;
         $data['page']   = "checkoutreservation";   
         $this->load->view("room_reservation/checkoutreservation", $data); 
     }
+
+    public function printCheckinbill($id = null)
+    {
+    	echo $id ; die();
+    	
+        $this->permission->method('room_reservation','read')->redirect();		
+        $data['title']    = display('room_reservation'); 
+	    $bid = explode(",", $id);
+		for($i=0; $i<count($bid); $i++){
+			$bdetails[$i] = $this->roomreservation_model->detailbooking($bid[$i]);
+			if ($this->db->table_exists('tbl_pool_booking') ){
+				$allpoolbill[$i] = $this->db->select('p.*,c.firstname')->from("tbl_pool_booking p")->join("customerinfo c","c.customerid=p.custid","left")->where("p.entrydate>=",$bdetails[$i]->checkindate)->where("p.entrydate<=",$bdetails[$i]->checkoutdate)->where("custid",$bdetails[$i]->cutomerid)->where("p.status!=",3)->get()->result();
+			}else{
+				$allpoolbill = "";
+			}
+			if ($this->db->table_exists('customer_order') ){
+				$allrestaurant[$i] = $this->db->select('b.bill_amount,co.order_id,c.firstname')->from("customer_order co")->join("customerinfo c","c.customerid=co.customer_id","left")->join("bill b", "b.order_id=co.order_id", "left")->where("CONCAT_WS(' ',co.order_date,co.order_time)>=",date('d-m-Y H:i:s', strtotime($bdetails[$i]->checkindate)))->where("CONCAT_WS(' ',co.order_date,co.order_time)<=",date('d-m-Y H:i:s', strtotime($bdetails[$i]->checkoutdate)))->where("co.customer_id",$bdetails[$i]->cutomerid)->where("co.order_status=",6)->where("b.bill_status=",0)->get()->result();
+			}else{
+				$allrestaurant = "";
+			}
+			if ($this->db->table_exists('tbl_hallroom_booking') ){
+				$allhallroom[$i] = $this->db->select('hb.totalamount,hb.hbid,c.firstname')->from("tbl_hallroom_booking hb")->join("customerinfo c","c.customerid=hb.customerid","left")->where("hb.booked_id",$bdetails[$i]->bookedid)->where("hb.customerid",$bdetails[$i]->cutomerid)->where("hb.status",1)->where("hb.payment_status",0)->get()->result();
+			}else{
+				$allhallroom = "";
+			}
+			if ($this->db->table_exists('tbl_bookParking') ){
+				$allcarParking[$i] = $this->db->select('bp.total_price,bp.bookParking_id,c.firstname')->from("tbl_bookParking bp")->join("booked_info bi","bi.bookedid=bp.bookedid","left")->join("customerinfo c","c.customerid=bi.cutomerid","left")->where("bp.bookedid",$bdetails[$i]->bookedid)->where("c.customerid",$bdetails[$i]->cutomerid)->where("bp.status",1)->where("bp.paymentStatus",0)->get()->result();
+			}else{
+				$allcarParking = "";
+			}
+
+		}
+		$data["poolbill"] = $allpoolbill;
+		$data["restaurantbill"] = $allrestaurant;
+		$data["hallroombill"] = $allhallroom;
+		$data["carParkingBill"] = $allcarParking;
+	    $data["bookingdata"] = $bdetails;
+		$data["setting"] = $this->db->select("title,address,email,phone")->from("setting")->where("id",2)->get()->row();
+		$data["taxsetting"] = $this->db->select("taxname,rate")->from("tbl_taxmgt")->where("isactive",1)->get()->result();
+		$data["setting"] = $this->db->select("title,address,email,phone,servicecharge")->from("setting")->get()->row();
+		$data["invoicelogo"] = $this->db->select("invoice_logo")->from("common_setting")->where("id",1)->get()->row();
+		$data["checkinrooms"] = $this->db->select('b.bookedid,b.room_no,c.firstname')->from("booked_info b")->join("customerinfo c","c.customerid=b.cutomerid","left")->where("b.bookingstatus",4)->get()->result();
+	    $data["bookingtype"] = $this->roomreservation_model->get_all('*','bookingtype','booktypeid');
+	    $data["bookingsource"] = $this->roomreservation_model->get_all('*','tbl_booking_type_info','btypeinfoid');
+	    $data["roomdetails"] = $this->roomreservation_model->get_all('roomid,roomtype','roomdetails','roomid');
+	    $data["paymentdetails"] = $this->roomreservation_model->get_all('*','payment_method','payment_method_id');
+		$data["banklist"] = $this->db->query("SELECT HeadCode,HeadName FROM acc_coa WHERE HeadLevel='4' And HeadCode LIKE '1020102%'")->result();
+	    $data["roomlist"] = $this->roomreservation_model->allrooms();
+		$data["customerlist"] = $this->roomreservation_model->customerlist();
+		$data["inouttime"] = $this->db->select("checkintime,checkouttime")->from("setting")->where("id",2)->get()->row();
+		$data['currency']    = getCurrency(); 
+        $data['module'] = "room_reservation";
+
+        $content = $this->load->view('printcheckin', $data, true);
+
+	    $dompdf = new Dompdf();
+
+	    $dompdf->loadHtml($content);
+
+	    $dompdf->setPaper('A4', 'portrait');
+
+	    $dompdf->render();
+
+	    $filename = 'invoice.pdf';
+
+	    if (empty($pdf)) {
+	    	//echo $content; exit;
+	        $dompdf->stream($filename, array('Attachment' => 0));
+	    } else {
+	        return $content;
+	    }
+    }
+
     public function checkoutall($id = null)
     {
 		$this->permission->method('room_reservation','read')->redirect();		
@@ -1018,11 +1090,8 @@ $totalAmount = $additionalCharges + $taxAmount;
                 $advance_paydate = date("d-m-Y H:i:s");
 			}
 			
-			
-			
-			
+		
 		$overalltotal = isset($payableamt, $alladvanceamount) ? ($payableamt + $alladvanceamount) : 0;
-          
           
           
             $checkoutdata = array(
@@ -1041,13 +1110,13 @@ $totalAmount = $additionalCharges + $taxAmount;
 
 			
 			
-		$additionalTaxdata = array(
-             'additional_cgst' => $this->input->post("Additionalcgst", true),
-             'additional_sgst' => $this->input->post("Additionalsgst", true),
-             'additional_reason' => $this->input->post("additional_reason", true),
-             'additional_remarks'  =>$this->input->post("additional_remarks", true)
-            );
-            $additionalTaxresult = $this->db->where("bookedid",$bid[$i])->update("booked_details",$additionalTaxdata);
+		// $additionalTaxdata = array(
+        //      'additional_cgst' => $this->input->post("Additionalcgst", true),
+        //      'additional_sgst' => $this->input->post("Additionalsgst", true),
+        //      'additional_reason' => $this->input->post("additional_reason", true),
+        //      'additional_remarks'  =>$this->input->post("additional_remarks", true)
+        //     );
+        //     $additionalTaxresult = $this->db->where("bookedid",$bid[$i])->update("booked_details",$additionalTaxdata);
 			if($result && $totalbill->booking_source){
 				$balance = $this->db->select("balance")->from("tbl_booking_type_info")->where("btypeinfoid",$totalbill->booking_source)->get()->row();
 				$newbalance = $balance->balance+$totalbill->commissionamount;
@@ -1394,17 +1463,31 @@ $totalAmount = $additionalCharges + $taxAmount;
 						}
 					}
 				}
-				//generate pdf
-				$this->load->library('pdfgenerator');
+				
 				$file = $this->viewdetailsprint($bid[0],'pdf');
-        		$file_path = $this->pdfgenerator->generate_pdf($bid[0], $file);
+        		
+        		$dompdf = new Dompdf();
+				$dompdf->loadHtml($file);
+				$dompdf->setPaper('A4', 'portrait');
+				$dompdf->render();
+
+				$filename = 'invoice_' . $bid[0] . '.pdf';
+				$dir = 'assets/pdf/';
+				if (!is_dir($dir)) {
+				    mkdir($dir, 0755, true);
+				}
+				$output = $dompdf->output();
+				$file_path = $dir . $filename;
+				file_put_contents($file_path, $output);
+
+        		// $file_path = $this->pdfgenerator->generate_pdf($bid[0], $file);
 				//sending email to customer
 				$binfo = $this->db->select("b.booking_number,b.room_no,b.total_price,c.firstname,c.email")->from("booked_info b")->join("customerinfo c","c.customerid=b.cutomerid","left")->where("bookedid",$bid[0])->get()->row();
 				$this->email_send($binfo,5,$file_path);
 				//end
-				echo '<h5>Success</h5>Checkout Successfully';
+				echo json_encode(['file_url' => base_url($file_path), 'success' => 'Checkout Successfully']);
 			} else {
-				echo '<h5>Failed</h5>Please Try Again';
+				echo json_encode(['error' => 'Failed to send email. Please try again.']);
 			}
 
 	}
@@ -3533,7 +3616,6 @@ $totalAmount = $additionalCharges + $taxAmount;
 	public function viewdetailsprint($id,$pdf=null){
 	   
 		$details=$this->roomreservation_model->details($id);
-
 		$data['bookinfo']   = $details;
 	    $data['bookingdata'] = $this->roomreservation_model->detailbooking($id);
 		$data['customerinfo']   = $this->roomreservation_model->customerinfo($details->cutomerid);

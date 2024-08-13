@@ -368,11 +368,10 @@ public function findBypayId($id = null)
 	public function paymentinfo($bookno){
 		$this->db->select('tbl_guestpayments.*');
 		$this->db->from('tbl_guestpayments');
-// 		$this->db->join('payment_method','payment_method.payment_method_id=tbl_guestpayments.paymenttype','left');
-// 		$this->db->join('booked_info','booked_info.bookedid=tbl_guestpayments.bookedid','left');
-              $this->db->not_like('tbl_guestpayments.details', 'Advance');
-		$this->db->where('tbl_guestpayments.bookedid',$bookno);
+        $this->db->not_like('tbl_guestpayments.details', 'Advance');
+		$this->db->where('tbl_guestpayments.payid',$bookno);
 		$query = $this->db->get();
+		// echo $this->db->last_query();die();
 		if ($query->num_rows() > 0) {
 			return $query->result();    
 		}
