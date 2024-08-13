@@ -48,3 +48,9 @@ Thumbs.db
 *.mov
 *.wmv
 
+application/config/config.php
+application/config/database.php
+application/logs/*
+application/ci_sessions/*
+uploads/supplier/*
+uploads/*
